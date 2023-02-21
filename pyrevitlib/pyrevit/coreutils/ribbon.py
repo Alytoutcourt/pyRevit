@@ -1,5 +1,6 @@
 """Base module to interact with Revit ribbon."""
 from collections import OrderedDict
+from Autodesk.Windows import RibbonToolTip
 
 #pylint: disable=W0703,C0302,C0103
 from pyrevit import HOST_APP, EXEC_PARAMS, PyRevitException
@@ -762,20 +763,25 @@ class _PyRevitRibbonButton(GenericPyRevitUIContainer):
     def set_tooltip_video(self, tooltip_video):
         try:
             adwindows_obj = self.get_adwindows_object()
+                if isinstance(self.get_rvtapi_object().ToolTip, str):
+                    exToolTip = self.get_rvtapi_object().ToolTip
+            else:
+                exToolTip = None
+            adwindows_obj.ToolTip = RibbonToolTip()
             if adwindows_obj and adwindows_obj.ToolTip:
-                adwindows_obj.ToolTip.ExpandedVideo = Uri(tooltip_video)
+                adwindows_obj.ToolTip.Title = self.ui_title
+                adwindows_obj.ToolTip.Content = exToolTip
+                _StackPanel = System.Windows.Controls.StackPanel()
+                _video = System.Windows.Controls.MediaElement()
+                _video.Source = Uri(tooltip_video)
+                _StackPanel.Children.Add(_video)
+                adwindows_obj.ToolTip.ExpandedContent = _StackPanel
+                adwindows_obj.ResolveToolTip()
             else:
                 self.tooltip_video = tooltip_video
         except Exception as ttvideo_err:
             raise PyRevitUIError('Error setting tooltip video {} | {} '
                                  .format(tooltip_video, ttvideo_err))
-
-    def set_tooltip_media(self, tooltip_media):
-        if tooltip_media.endswith(DEFAULT_TOOLTIP_IMAGE_FORMAT):
-            self.set_tooltip_image(tooltip_media)
-        elif tooltip_media.endswith(DEFAULT_TOOLTIP_VIDEO_FORMAT):
-            self.set_tooltip_video(tooltip_media)
-
     def reset_highlights(self):
         if hasattr(AdInternal.Windows, 'HighlightMode'):
             adwindows_obj = self.get_adwindows_object()
